@@ -3,7 +3,6 @@ import numpy as np
 from lib import consts
 
 # Handles display for visualizations of wave shape, envelope, etc...
-# FIXME implement plot for filter frequency response
 class Plot():
     
     def __init__(self, num_plots=consts.NUM_GRAPHS):

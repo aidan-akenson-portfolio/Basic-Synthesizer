@@ -1,8 +1,6 @@
 import numpy as np
 import math
 
-
-
 from lib import consts
 
 # See https://www.desmos.com/calculator/nrn6oabn6h for preliminary math
