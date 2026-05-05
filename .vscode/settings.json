@@ -1,8 +1,0 @@
-{
-    "files.associations": {
-        "*.ttml": "xml",
-        "*.ttss": "css"
-    },
-    "python.analysis.enablePytestSupport": true,
-    "python.analysis.inlayHints.functionReturnTypes": false
-}
