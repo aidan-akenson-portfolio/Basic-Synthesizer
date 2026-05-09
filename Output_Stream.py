@@ -70,7 +70,8 @@ class output:
                 return (self._silence.tobytes(), pyaudio.paContinue)
             
             # Get fresh data from the buffer provider
-            new_data = self._buffer_provider()
+            new_data = (self._buffer_provider() * 32767).astype(np.int16)
+            new_data = new_data.flatten()
             
             #if self._debug_mode == 2:
             #    print(f"Callback getting fresh data from provider")
@@ -82,7 +83,7 @@ class output:
         if self._stream is None:
             self._stream = self._p.open(
                 format=pyaudio.paInt16, 
-                channels=1,
+                channels=2,
                 rate=consts.BITRATE,
                 output=True,
                 output_device_index=output_device,

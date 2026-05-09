@@ -57,10 +57,8 @@ class osc():
             generation_phase += (2 * math.pi * frequency) / consts.BITRATE
             if generation_phase > 2 * math.pi:
                 generation_phase -= 2 * math.pi
-            
-        # Convert to 16-bit audio
-        samples_int16 = (samples * 32767).astype(np.int16)
-        return samples_int16
+
+        return samples
     
     #Return enough samples to fill the buffer size
     def __getitem__(self, MIDI_value) -> list:
@@ -71,7 +69,7 @@ class osc():
         position = self._current_positions[MIDI_value]
 
         #Initialise output buffer
-        output = np.zeros(consts.BUFFER_SIZE, np.int16)
+        output = np.zeros(consts.BUFFER_SIZE, np.float64)
 
         #Track position within output buffer and number of samples still to populate
         output_position = 0

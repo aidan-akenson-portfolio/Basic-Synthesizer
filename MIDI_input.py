@@ -1,5 +1,4 @@
 import mido
-import mido.backends.rtmidi
 from lib import mtof
 from lib import consts
 
@@ -18,7 +17,6 @@ class MIDI_device:
         print("Base Class MIDI Callback entered")
         if message == None:
             raise TypeError("processMIDI got None (expected mido.Message)")
-        
         if message.type == 'note_on':
             print(f"Note ON: {message.note}, Velocity: {message.velocity}")
         elif message.type == 'note_off':

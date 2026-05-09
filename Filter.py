@@ -86,7 +86,7 @@ class Filter():
             self._b0 = (1.0 + cos_omega) / 2.0
             self._b1 = -(1.0 + cos_omega)
             self._b2 = (1.0 + cos_omega) / 2.0
-            self._a0 = 1.0 + alpha
+            self._a0 = 1.0 + alpha  # Normalization factor
             self._a1 = -2.0 * cos_omega
             self._a2 = 1.0 - alpha
 
@@ -103,7 +103,6 @@ class Filter():
     # Applies the filter to all samples of a buffer
     def use(self, input_signal: np.array) -> np.array:
         # Normalize input to ±1.0
-        normalized_input = input_signal.astype(np.float32) / 32767.0
         output = np.empty(consts.BUFFER_SIZE, np.float32)
 
         # If coefficients have changed, use interpolation
@@ -126,7 +125,7 @@ class Filter():
                 # Interpolate rather than calculate every sample
                 for i in range(i_0, i_f):
 
-                    current_input = normalized_input[i]
+                    current_input = input_signal[i]
 
                     # 2-pole biquad difference equation
                     current_output = (b0 * current_input + 
@@ -148,7 +147,7 @@ class Filter():
             self._new_coefficients = False
         else:
             for i in range(consts.BUFFER_SIZE):
-                current_input = normalized_input[i]
+                current_input = input_signal[i]
 
                 # 2-pole biquad difference equation
                 current_output = (self._b0 * current_input + 
@@ -167,7 +166,7 @@ class Filter():
                 self._y2 = self._y1  
                 self._y1 = current_output
 
-        return (output * 32767.0).astype(np.int16)
+        return output
 
     # For visualization
     def getFreqResponse(self) -> np.array:

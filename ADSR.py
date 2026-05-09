@@ -22,10 +22,10 @@ class ADSR():
             self._release[i] = int((consts.MIN_RELEASE + (i / consts.MAX_MIDI) * (consts.MAX_RELEASE - consts.MIN_RELEASE)) * consts.BITRATE)
 
         # Initial envelope values
-        self._A_param = 0
-        self._D_param = 32
-        self._S_param = 0
-        self._R_param = 32
+        self._A_param = consts.INITIAL_ATTACK
+        self._D_param = consts.INITIAL_DECAY
+        self._S_param = consts.INITIAL_SUSTAIN
+        self._R_param = consts.INITIAL_RELEASE
 
         # Array initializations, ensure enough samples to prevent non-flat sustain and post-release buffers
         self._array_size = consts.BITRATE // 10             

@@ -1,15 +1,14 @@
 import numpy as np
 import time
-import mido
 import copy
 
 import MIDI_input as MIDI
 import Output_Stream
 import osc
 import ADSR
-import Waveform_Visualizer
 import Filter
 import Parameter_Interface
+import IR_Reverb
 
 from lib import mtof
 from lib import consts
@@ -24,10 +23,9 @@ UNUSED = -1
 #   -         Filter (Filter)
 #
 class Synth(MIDI.MIDI_device):
-    def __init__(self, wave_type: str = consts.WAVE_TYPE, debug_mode: int = consts.DEBUG_MODE, amplitude: float = 1.0):
+    def __init__(self, debug_mode: int = consts.DEBUG_MODE, amplitude: float = 1.0):
         
         start = time.perf_counter()
-
 
         super().__init__(consts.DEVICE_NAME)
         
@@ -77,6 +75,12 @@ class Synth(MIDI.MIDI_device):
         if self._debug_mode == 3:
             env_timer = time.perf_counter() - start
 
+        #Reverb
+        self._reverb = IR_Reverb.IR(ir=consts.IR)
+        
+        if self._debug_mode == 3:
+            reverb_timer = time.perf_counter() - start
+
         #Mtof and Mton converters, just in case
         self._mtof = mtof.mtof()
         self._mton = mtof.mton()
@@ -115,7 +119,7 @@ class Synth(MIDI.MIDI_device):
         #Default buffer provider
         else:
             self._output.play(self.getAudioBuffer)
-
+        
         if self._debug_mode == 3:
             out_stream_timer = time.perf_counter() - start
             print()
@@ -125,6 +129,7 @@ class Synth(MIDI.MIDI_device):
             print(f"\tOscillator bank populated in: {(1000 * (osc_gen_timer - base_class_timer)):.2f}ms")
             print(f"\tFilter initialized in: {(1000 * (filter_timer - osc_gen_timer)):.2f}ms")
             print(f"\tEnvelopes initialized in: {(1000 * (env_timer - filter_timer)):.2f}ms")
+            print(f"\tReverb initialized in: {(1000 * (reverb_timer - env_timer)):.2f}ms")
             print(f"\tMIDI converters initialized in: {(1000 * (midi_conv_timer - env_timer)):.2f}ms")
             print(f"\tVisualizer initialized in: {(1000 * (vis_timer - midi_conv_timer)):.2f}ms")
             print(f"\tOutput stream initialized in: {(1000 * (out_stream_timer - vis_timer)):.2f}ms")
@@ -140,8 +145,8 @@ class Synth(MIDI.MIDI_device):
     def handleMessage(self, message):
 
         #Comment out to improve performance
-        if self._debug_mode == 2:
-            print("Synth MIDI Callback entered")
+        #if self._debug_mode == 2:
+        #    print("Synth MIDI Callback entered")
 
         #Update oscillator based on new frequency and trigger ADSR start
         if message.type == 'note_on' and self._mtof[message.note]:
@@ -168,47 +173,51 @@ class Synth(MIDI.MIDI_device):
                 print(f"Control Change: {message.control}, Value: {message.value}")
 
             # ADSR parameters handled using ADSR bank class
-            if message.control == consts.ATTACK_CC:
-                for e in self._envelopes:
-                    e.updateParameters(attack=message.value)
-                self._needs_redraw = True
-                return
-            if message.control == consts.DECAY_CC:
-                for e in self._envelopes:
-                    e.updateParameters(decay=message.value)
-                self._needs_redraw = True
-                return
-            if message.control == consts.SUSTAIN_CC:
-                for e in self._envelopes:
-                    e.updateParameters(sustain=message.value)
-                self._needs_redraw = True
-                return
-            if message.control == consts.RELEASE_CC:
-                for e in self._envelopes:
-                    e.updateParameters(release=message.value)
-                self._needs_redraw = True
-                return
-            if message.control == consts.WAVE_CC:
-                type = int(3 * message.value / consts.MAX_MIDI)
-                match type:
-                    case 0: # Sine
-                        if self._wave_type != "Sine":
-                            self._osc = self._sin
-                            self._wave_type = "Sine"
-                    case 1: # Saw
-                        if self._wave_type != "Saw":
-                            self._osc = self._saw
-                            self._wave_type = "Saw"
-                    case 2: # Square
-                        if self._wave_type != "Square":
-                            self._osc = self._sqr
-                            self._wave_type = "Square"
-                self._needs_redraw = True
-                return
-            if message.control == consts.CUTOFF_CC or message.control == consts.Q_CC:
-                self._Parameter_Interface.handle_cc_message(message.control, message.value)
-                self._needs_redraw = True
-                return
+            match message.control:
+                case consts.ATTACK_CC:
+                    for e in self._envelopes:
+                        e.updateParameters(attack=message.value)
+                    self._needs_redraw = True
+                    return
+                case consts.DECAY_CC:
+                    for e in self._envelopes:
+                        e.updateParameters(decay=message.value)
+                    self._needs_redraw = True
+                    return
+                case consts.SUSTAIN_CC:
+                    for e in self._envelopes:
+                        e.updateParameters(sustain=message.value)
+                    self._needs_redraw = True
+                    return
+                case consts.RELEASE_CC:
+                    for e in self._envelopes:
+                        e.updateParameters(release=message.value)
+                    self._needs_redraw = True
+                    return
+                case consts.WAVE_CC:
+                    type = int(3 * message.value / consts.MAX_MIDI)
+                    match type:
+                        case 0: # Sine
+                            if self._wave_type != "Sine":
+                                self._osc = self._sin
+                                self._wave_type = "Sine"
+                        case 1: # Saw
+                            if self._wave_type != "Saw":
+                                self._osc = self._saw
+                                self._wave_type = "Saw"
+                        case 2: # Square
+                            if self._wave_type != "Square":
+                                self._osc = self._sqr
+                                self._wave_type = "Square"
+                    self._needs_redraw = True
+                    return
+                case consts.CUTOFF_CC | consts.Q_CC:
+                    self._Parameter_Interface.handle_cc_message(message.control, message.value)
+                    self._needs_redraw = True
+                    return
+                case consts.REVERB_CC:
+                    self._reverb.updateDryWet(message.value / consts.MAX_MIDI) 
+                    return
             return
 
     #Voice management
@@ -303,9 +312,11 @@ class Synth(MIDI.MIDI_device):
         for i in range(len(self._voices)):
             if self._voices[i] != UNUSED:
                 mixed_buffer += self._envelopes[i].applyEnvelope(self._osc[self._voices[i]]).astype(np.float64) / consts.MAX_VOICES
-                
-        #Convert to int16
-        return mixed_buffer.astype(np.int16)
+        
+        #Apply reverb
+        reverb_buffer = self._reverb.use(mixed_buffer)
+
+        return reverb_buffer
     def get2PoleFilterAudioBuffer(self):
             
         #Ensure finished voices are set as such
@@ -331,8 +342,11 @@ class Synth(MIDI.MIDI_device):
 
         #Only use a single filter
         filtered_buffer = self._filter1.use(mixed_buffer)
-        #Convert to int16
-        return filtered_buffer.astype(np.int16)
+        
+        #Apply reverb
+        reverb_buffer = self._reverb.use(filtered_buffer)
+
+        return reverb_buffer
     def get4PoleFilterAudioBuffer(self):
             
         #Ensure finished voices are set as such
@@ -340,12 +354,12 @@ class Synth(MIDI.MIDI_device):
 
         #Start with silence
         mixed_buffer = np.zeros(consts.BUFFER_SIZE, np.float64)
-    
+
         #Mix all active voices
         for i in range(len(self._voices)):
             if self._voices[i] != UNUSED:
                 mixed_buffer += self._envelopes[i].applyEnvelope(self._osc[self._voices[i]]).astype(np.float64) / consts.MAX_VOICES
-                
+                 
         #Update cutoff and resonance if user has changed them
         if self._Parameter_Interface._new_cutoff is not None:
             new_cutoff = self._Parameter_Interface._new_cutoff
@@ -360,8 +374,11 @@ class Synth(MIDI.MIDI_device):
 
         #Casecade filters
         filtered_buffer = self._filter2.use(self._filter1.use(mixed_buffer))
-        #Convert to int16
-        return filtered_buffer.astype(np.int16)
+
+        #Apply reverb
+        reverb_buffer = self._reverb.use(filtered_buffer)
+
+        return reverb_buffer
     def getDebugAudioBuffer(self):
 
         start = time.perf_counter()
@@ -371,18 +388,20 @@ class Synth(MIDI.MIDI_device):
 
         #Start with silence
         mixed_buffer = np.zeros(consts.BUFFER_SIZE, np.float64)
-    
+            
         #Mix all active voices
         for i in range(len(self._voices)):
             if self._voices[i] != UNUSED:
                 mixed_buffer += self._envelopes[i].applyEnvelope(self._osc[self._voices[i]]).astype(np.float64) / consts.MAX_VOICES
 
+        #Apply reverb
+        reverb_buffer = self._reverb.use(mixed_buffer) 
+        
         ms = (time.perf_counter() - start)*1000
         if ms > consts.TOO_SLOW:
             print(f"SLOW BUFFER GENERATION: {ms:.2f}ms")
 
-        #Convert to int16
-        return mixed_buffer.astype(np.int16)
+        return reverb_buffer
     def getDebug2PoleFilterAudioBuffer(self):
 
         start = time.perf_counter()
@@ -392,11 +411,12 @@ class Synth(MIDI.MIDI_device):
 
         #Start with silence
         mixed_buffer = np.zeros(consts.BUFFER_SIZE, np.float64)
-    
+            
         #Mix all active voices
         for i in range(len(self._voices)):
             if self._voices[i] != UNUSED:
                 mixed_buffer += self._envelopes[i].applyEnvelope(self._osc[self._voices[i]]).astype(np.float64) / consts.MAX_VOICES
+
 
         #Update cutoff and resonance if user has changed them
         if self._Parameter_Interface._new_cutoff is not None:
@@ -410,13 +430,15 @@ class Synth(MIDI.MIDI_device):
 
         #Only use a single filter
         filtered_buffer = self._filter1.use(mixed_buffer)
-        
+
+        #Apply reverb
+        reverb_buffer = self._reverb.use(filtered_buffer)
+
         ms = (time.perf_counter() - start)*1000
         if ms >  consts.TOO_SLOW:
             print(f"SLOW BUFFER GENERATION: {ms:.2f}ms")
 
-        #Convert to int16
-        return filtered_buffer.astype(np.int16)
+        return reverb_buffer
     def getDebug4PoleFilterAudioBuffer(self):
 
         start = time.perf_counter()
@@ -452,7 +474,12 @@ class Synth(MIDI.MIDI_device):
         filter_start = time.perf_counter()
         filtered_buffer = self._filter2.use(self._filter1.use(mixed_buffer))
         filter_time = (time.perf_counter() - filter_start) * 1000
-        
+
+        #Apply reverb
+        reverb_start = time.perf_counter()
+        reverb_buffer = self._reverb.use(filtered_buffer)
+        reverb_time = (time.perf_counter() - reverb_start) * 1000
+
         ms = (time.perf_counter() - start)*1000
         if ms > consts.TOO_SLOW:
             print(f"SLOW BUFFER GENERATION: {ms:.2f}ms")
@@ -462,9 +489,10 @@ class Synth(MIDI.MIDI_device):
                 print(f"Filter param processing: {filter_param_time:.2f}ms")
             if filter_time > 1.0:
                 print(f"Filter processing: {filter_time:.2f}ms")
+            if reverb_time > 1.0:
+                print(f"Filter processing: {reverb_time:.2f}ms")
 
-        #Convert to int16
-        return filtered_buffer.astype(np.int16)
+        return reverb_buffer
     
     #Notes that parameters have changed since last update
     def redraw(self):

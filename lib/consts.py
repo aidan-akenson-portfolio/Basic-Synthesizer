@@ -1,7 +1,7 @@
 # =============== SYNTH PARAMETERS ================
 
 # Supports "Sine" "Saw" or "Square"
-WAVE_TYPE = "Sine"           
+WAVE_TYPE = "Saw"           
 
 # MIDI CC Bindings
 ATTACK_CC = 1
@@ -11,12 +11,17 @@ RELEASE_CC = 4
 CUTOFF_CC = 5
 Q_CC = 6
 WAVE_CC = 7
+REVERB_CC = 8
 
+FILTER_ON = True  
 FILTER_TYPE = "hi_cut"  # "hi_cut" or "low_cut"
-FILTER_ON = True    
 POLES = 2   # 2 or 4 
             # If you're having latency / underruns in 4, swapping to 2 could help
 
+REVERB_ON = True
+DRY_WET = 0.8   # Dry = 0, Wet = 1
+IR = "1"        # Indicator for which impulse response the reverb should load
+REVERB_HEADROOM_CONSTANT = 0.1
 # =================================================
 
 
@@ -43,8 +48,10 @@ DEBUG_MODE = 0              #0 --- No debug outputs
 TOO_SLOW = 2.0
 
 BITRATE = 48000
-BUFFER_SIZE = 256
 MAX_VOICES = 8
+BUFFER_SIZE = 256           # This is the mono buffer size, using the reverb 
+                            # changes the audio to stereo and doubles this size
+IR_FFT_SIZE = 2 * BUFFER_SIZE
 
 # =================================================
 
@@ -57,7 +64,7 @@ MAX_VOICES = 8
 
 
 # =============== REFERENCE VALUES ================
-NYQUIST = BITRATE / 2
+NYQUIST = BITRATE // 2
 
 # MIDI control values
 A_440 = 69
@@ -90,12 +97,17 @@ FILTER_PLOT = 2
 # Bounds for ADSR parameters
 MAX_ATTACK  = 1.000
 MIN_ATTACK  = 0.005
-MAX_DECAY   = 1.500
+MAX_DECAY   = 3.000
 MIN_DECAY   = 0.100
 MAX_SUSTAIN = 1.000
 MIN_SUSTAIN = 0.000
 MAX_RELEASE = 3.000
 MIN_RELEASE = 0.005
+
+INITIAL_ATTACK = 8
+INITIAL_DECAY = 127
+INITIAL_SUSTAIN = 0
+INITIAL_RELEASE = 64
 
 EXPONENTIAL_DECAY_COEFFICIENT = 3.000   # 0: linear release
                                         # 1: Standard exponential release

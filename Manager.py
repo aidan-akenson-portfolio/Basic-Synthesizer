@@ -25,7 +25,7 @@ class Manager:
         # Main loop
         try:
             while self._is_running:
-                self._update_visualization_if_needed()
+                #self._update_visualization_if_needed()
                 time.sleep(0.016)
         except KeyboardInterrupt:
             pass
@@ -36,8 +36,8 @@ class Manager:
         self._is_running = False
 
         # Stop visualizer
-        if self.visualizer:
-            self.visualizer.close()
+        #if self.visualizer:
+        #    self.visualizer.close()
 
 
     #================VISUALIZATION================
