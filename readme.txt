@@ -11,9 +11,6 @@
 
 =====FEATURES TO WORK ON=====
 
- 1) Fix filter response to properly show cutoff frequency and 
-    filter type - currently it just shows resonance.
-
  1) Improve device autodetection
 
- 2) Create exe
+ 2) Make portable
