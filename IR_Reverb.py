@@ -59,10 +59,13 @@ class IR():
             self._ir /= (ir_max + 1e-12)            # add a very small constant to prevent div0
         ir_rms = np.sqrt(np.mean(self._ir ** 2))
         self._ir /= (ir_rms + 1e-12)                # add a very small constant to prevent div0
-        self._ir *= consts.REVERB_HEADROOM_CONSTANT
+
+        self._num_partitions = min(consts.NUM_IR_PARTITIONS, int(np.ceil(len(self._ir) / consts.BUFFER_SIZE)))
+
+        # Attenuation to lower the gain of the convolution proportionally to the reverb size
+        self._ir *= consts.IR_ATTENUATION_CONSTANT
 
         # Create IR partitions
-        self._num_partitions = int(np.ceil(len(self._ir) / consts.BUFFER_SIZE)) 
         self._ir_partitions_left = self._partition_ir(0)
         self._ir_partitions_right = self._partition_ir(1)
 
@@ -142,8 +145,9 @@ class IR():
             
         output = np.column_stack([output_block_left, output_block_right])
 
-        # Attenuate to prevent clipping
-        output *= consts.REVERB_HEADROOM_CONSTANT
+        # Attenuation based on num partitions to normalize for 
+        # the computation tradeoff the user might make
+        output *= (consts.MAX_PARTITIONS / consts.NUM_IR_PARTITIONS) * (consts.MIN_PARTITIONS / consts.MAX_PARTITIONS) * consts.REVERB_MAKEUP_GAIN_CONSTANT
 
         # Dry-Wet Mix
         output[:, 0] = (self._dry_wet * output[:, 0]) + (((1 - self._dry_wet) * input_signal[:, 0]))

@@ -21,7 +21,12 @@ POLES = 2   # 2 or 4
 REVERB_ON = True
 DRY_WET = 0.8   # Dry = 0, Wet = 1
 IR = "1"        # Indicator for which impulse response the reverb should load
-REVERB_HEADROOM_CONSTANT = 0.1
+IR_ATTENUATION_CONSTANT = 0.1
+REVERB_MAKEUP_GAIN_CONSTANT = 2
+MAX_PARTITIONS = 256
+MIN_PARTITIONS = 4
+NUM_IR_PARTITIONS = 32   # Lower => faster computation, at the cost of reverb accuracy, duration
+                         # Higher => Longer, more accurate reverb, at the cost of computation
 # =================================================
 
 
