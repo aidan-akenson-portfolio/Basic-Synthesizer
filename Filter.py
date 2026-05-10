@@ -134,7 +134,7 @@ class Filter():
                                     a1 * self._y1 - 
                                     a2 * self._y2)
                     # Clamp output to prevent runaway
-                    current_output = max(-1.0, min(1.0, current_output))
+                    current_output = np.maximum(-1.0, np.minimum(1.0, current_output))
                     output[i] = current_output
                     
                     # Shift state variables
@@ -157,7 +157,7 @@ class Filter():
                                 self._a2 * self._y2)
             
                 # Clamp output to prevent runaway
-                current_output = max(-1.0, min(1.0, current_output))
+                current_output = np.maximum(-1.0, np.minimum(1.0, current_output))
                 output[i] = current_output
                 
                 # Shift state variables

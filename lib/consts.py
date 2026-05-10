@@ -17,6 +17,8 @@ FILTER_ON = True
 FILTER_TYPE = "hi_cut"  # "hi_cut" or "low_cut"
 POLES = 2   # 2 or 4 
             # If you're having latency / underruns in 4, swapping to 2 could help
+            # Currently, 4-pole filters will run before the reverb, due to processing limitations
+            # on my machine, while 2-pole filters will run after the reverb, as that sounds better.
 
 REVERB_ON = True
 DRY_WET = 0.8   # Dry = 0, Wet = 1
@@ -25,7 +27,7 @@ IR_ATTENUATION_CONSTANT = 0.1
 REVERB_MAKEUP_GAIN_CONSTANT = 2
 MAX_PARTITIONS = 256
 MIN_PARTITIONS = 4
-NUM_IR_PARTITIONS = 32   # Lower => faster computation, at the cost of reverb accuracy, duration
+NUM_IR_PARTITIONS = 64  # Lower => faster computation, at the cost of reverb accuracy, duration
                          # Higher => Longer, more accurate reverb, at the cost of computation
 # =================================================
 

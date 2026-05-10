@@ -1,5 +1,5 @@
 import Synth
-import Waveform_Visualizer
+#import Waveform_Visualizer
 
 from lib import consts
 
@@ -10,7 +10,7 @@ class Manager:
     def __init__(self):
         # Components
         self.synth = Synth.Synth()
-        self.visualizer = Waveform_Visualizer.Plot()
+        #self.visualizer = Waveform_Visualizer.Plot()
 
         # Timing
         self._last_vis_update = 0

@@ -101,56 +101,61 @@ class IR():
         # Convert to stereo if mono
         if input_signal.ndim == 1:
             input_signal = np.column_stack([input_signal, input_signal])
+            
+        if consts.REVERB_ON:
 
-        # Zero-pad input
-        zero_padded_input_left = np.zeros(consts.IR_FFT_SIZE)
-        zero_padded_input_left[:consts.BUFFER_SIZE] = input_signal[:, 0]
-        zero_padded_input_right = np.zeros(consts.IR_FFT_SIZE)
-        zero_padded_input_right[:consts.BUFFER_SIZE] = input_signal[:, 1]
+            # Zero-pad input
+            zero_padded_input_left = np.zeros(consts.IR_FFT_SIZE)
+            zero_padded_input_left[:consts.BUFFER_SIZE] = input_signal[:, 0]
+            zero_padded_input_right = np.zeros(consts.IR_FFT_SIZE)
+            zero_padded_input_right[:consts.BUFFER_SIZE] = input_signal[:, 1]
 
-        # take fft of padded input
-        fft_left = fft(zero_padded_input_left)
-        fft_right = fft(zero_padded_input_right)
+            # take fft of padded input
+            fft_left = fft(zero_padded_input_left)
+            fft_right = fft(zero_padded_input_right)
 
-        # Roll the input history buffer
-        self._input_history_left = np.roll(self._input_history_left, 1, axis=0)
-        self._input_history_right = np.roll(self._input_history_right, 1, axis=0)
+            # Roll the input history buffer
+            self._input_history_left = np.roll(self._input_history_left, 1, axis=0)
+            self._input_history_right = np.roll(self._input_history_right, 1, axis=0)
 
-        # Store newest fft
-        self._input_history_left[0] = fft_left
-        self._input_history_right[0] = fft_right
+            # Store newest fft
+            self._input_history_left[0] = fft_left
+            self._input_history_right[0] = fft_right
 
-        # Initialize output arrays
-        output_freq_left = np.zeros(consts.IR_FFT_SIZE, dtype=complex)
-        output_freq_right = np.zeros(consts.IR_FFT_SIZE, dtype=complex)
+            # Initialize output arrays
+            output_freq_left = np.zeros(consts.IR_FFT_SIZE, dtype=complex)
+            output_freq_right = np.zeros(consts.IR_FFT_SIZE, dtype=complex)
 
-        # Partitioned Convolution
-        for i in range(self._num_partitions):
+            # Partitioned Convolution
+            for i in range(self._num_partitions):
+                    
+                # Add to the accumulator data
+                output_freq_left += (self._input_history_left[i] * self._ir_partitions_left[i])
+                output_freq_right += (self._input_history_right[i] * self._ir_partitions_right[i])
+
+            # Inverse Fourier Transform on the resultant frequency, discarding unneeded portion
+            output_time_left = np.real(ifft(output_freq_left, n=consts.IR_FFT_SIZE))
+            output_time_right = np.real(ifft(output_freq_right, n=consts.IR_FFT_SIZE))
                 
-            # Add to the accumulator data
-            output_freq_left += (self._input_history_left[i] * self._ir_partitions_left[i])
-            output_freq_right += (self._input_history_right[i] * self._ir_partitions_right[i])
+            # Overlap-add
+            output_block_left = (output_time_left[:consts.BUFFER_SIZE] + self._overlap_left)
+            output_block_right = (output_time_right[:consts.BUFFER_SIZE] + self._overlap_right)
+                
+            # Save overlap
+            self._overlap_left = output_time_left[consts.BUFFER_SIZE:]
+            self._overlap_right = output_time_right[consts.BUFFER_SIZE:]
+                
+            output = np.column_stack([output_block_left, output_block_right])
 
-        # Inverse Fourier Transform on the resultant frequency, discarding unneeded portion
-        output_time_left = np.real(ifft(output_freq_left, n=consts.IR_FFT_SIZE))
-        output_time_right = np.real(ifft(output_freq_right, n=consts.IR_FFT_SIZE))
-            
-        # Overlap-add
-        output_block_left = (output_time_left[:consts.BUFFER_SIZE] + self._overlap_left)
-        output_block_right = (output_time_right[:consts.BUFFER_SIZE] + self._overlap_right)
-            
-        # Save overlap
-        self._overlap_left = output_time_left[consts.BUFFER_SIZE:]
-        self._overlap_right = output_time_right[consts.BUFFER_SIZE:]
-            
-        output = np.column_stack([output_block_left, output_block_right])
+            # Attenuation based on num partitions to normalize for 
+            # the computation tradeoff the user might make
+            output *= (consts.MAX_PARTITIONS / consts.NUM_IR_PARTITIONS) * (consts.MIN_PARTITIONS / consts.MAX_PARTITIONS) * consts.REVERB_MAKEUP_GAIN_CONSTANT
 
-        # Attenuation based on num partitions to normalize for 
-        # the computation tradeoff the user might make
-        output *= (consts.MAX_PARTITIONS / consts.NUM_IR_PARTITIONS) * (consts.MIN_PARTITIONS / consts.MAX_PARTITIONS) * consts.REVERB_MAKEUP_GAIN_CONSTANT
+            # Dry-Wet Mix
+            output[:, 0] = (self._dry_wet * output[:, 0]) + (((1 - self._dry_wet) * input_signal[:, 0]))
+            output[:, 1] = (self._dry_wet * output[:, 1]) + (((1 - self._dry_wet) * input_signal[:, 1]))
+            
+            return(output)
 
-        # Dry-Wet Mix
-        output[:, 0] = (self._dry_wet * output[:, 0]) + (((1 - self._dry_wet) * input_signal[:, 0]))
-        output[:, 1] = (self._dry_wet * output[:, 1]) + (((1 - self._dry_wet) * input_signal[:, 1]))
-        
-        return(output)
+        else:
+            return input_signal
